@@ -15,9 +15,9 @@ class AuthController extends Controller
     private function getGoogleClient(): GoogleClient
     {
         $client = new GoogleClient();
-        $client->setClientId('services.google.client_id');
-        $client->setClientSecret('services.google.client_secret');
-        $client->setRedirectUri('services.google.redirect_uri');
+        $client->setClientId(config('services.google.client_id'));
+        $client->setClientSecret(config('services.google.client_secret'));
+        $client->setRedirectUri(config('services.google.redirect_uri'));
         $client->addScope('openid');
         $client->addScope('email');
         $client->addScope('profile');
