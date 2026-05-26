@@ -6,6 +6,9 @@
 </template>
 
 <script setup lang="ts">
+import { MANAGER_AND_ABOVE } from '~/constants/enums'
+import type { UserRole } from '~/constants/enums'
+
 const router = useRouter()
 const auth = useAuthStore()
 const error = ref<string | null>(null)
@@ -26,6 +29,13 @@ onMounted(() => {
 
   try {
     const user = JSON.parse(userStr)
+
+    // Backoffice routes require admin or manager role
+    if (redirect.startsWith('/admin') && !MANAGER_AND_ABOVE.includes(user.role as UserRole)) {
+      router.replace('/admin/login?error=' + encodeURIComponent('Access denied. Admin accounts only.'))
+      return
+    }
+
     auth.handleOAuthCallback({ user, token })
     router.replace(redirect)
   } catch {
