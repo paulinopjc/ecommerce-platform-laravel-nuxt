@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\OrderStatusHistory;
 use App\Models\Payment;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -13,7 +14,7 @@ class OrderController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $query = Order::with(['user', 'items'])->orderBy('created_at', 'desc');
+        $query = Order::with(['customer', 'items'])->orderBy('created_at', 'desc');
 
         if ($request->filled('status')) {
             $query->where('status', $request->status);
@@ -28,8 +29,15 @@ class OrderController extends Controller
 
     public function show(Request $request, Order $order): JsonResponse
     {
+        $principal = $request->user();
+
+        // Backoffice managers can view any order
+        if ($principal instanceof User && $principal->isManager()) {
+            return response()->json(['data' => $order->load(['items', 'payments', 'statusHistory'])]);
+        }
+
         // Customers can only view their own orders
-        if (!$request->user()->isManager() && $order->user_id !== $request->user()->id) {
+        if ($order->customer_id !== $principal->id) {
             return response()->json(['message' => 'Not found'], 404);
         }
 

@@ -24,7 +24,7 @@ class CheckoutController extends Controller
         ]);
 
         $user = $request->user();
-        $cart = Cart::where('user_id', $user->id)->first();
+        $cart = Cart::where('customer_id', $user->id)->first();
 
         if (!$cart) {
             return response()->json(['message' => 'Cart not found'], 404);

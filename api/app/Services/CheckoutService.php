@@ -9,7 +9,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\OrderStatusHistory;
 use App\Models\Payment;
-use App\Models\User;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Facades\DB;
 use Xendit\Xendit;
 use Xendit\Invoice;
@@ -24,7 +24,7 @@ class CheckoutService
         Xendit::setApiKey(config('services.xendit.secret_key'));
     }
 
-    public function checkout(User $user, Cart $cart, array $data): array
+    public function checkout(Authenticatable $user, Cart $cart, array $data): array
     {
         $paymentMethod = $data['payment_method'] ?? Order::PAYMENT_COD;
 
@@ -86,7 +86,7 @@ class CheckoutService
 
             // Create order
             $order = Order::create([
-                'user_id' => $user->id,
+                'customer_id' => $user->id,
                 'order_number' => Order::generateOrderNumber(),
                 'status' => Order::STATUS_PENDING_PAYMENT,
                 'source' => Order::SOURCE_WEB,
@@ -94,7 +94,7 @@ class CheckoutService
                 'subtotal_cents' => $subtotal,
                 'discount_cents' => $discount,
                 'total_cents' => $total,
-                'shipping_name' => $data['shipping_name'] ?? $user->name,
+                'shipping_name' => $data['shipping_name'] ?? $user->name, // $user is Authenticatable (Customer)
                 'shipping_address' => $data['shipping_address'] ?? null,
                 'billing_address' => $data['billing_address'] ?? null,
                 'notes' => $data['notes'] ?? null,
@@ -110,7 +110,7 @@ class CheckoutService
                 CouponUsage::create([
                     'coupon_id' => $couponResult['coupon']->id,
                     'order_id' => $order->id,
-                    'user_id' => $user->id,
+                    'customer_id' => $user->id,
                     'discount_cents' => $discount,
                 ]);
             }
@@ -150,7 +150,7 @@ class CheckoutService
         ];
     }
 
-    private function checkoutXendit(Order $order, User $user): array
+    private function checkoutXendit(Order $order, Authenticatable $user): array
     {
         $amountPhp = $order->total_cents / 100;
 

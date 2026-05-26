@@ -32,7 +32,7 @@ class Order extends Model
     public const PAYMENT_METHODS = [self::PAYMENT_COD, self::PAYMENT_XENDIT];
 
     protected $fillable = [
-        'user_id', 'order_number', 'status', 'source',
+        'customer_id', 'order_number', 'status', 'source',
         'subtotal_cents', 'discount_cents', 'shipping_cents',
         'tax_cents', 'total_cents', 'currency',
         'shipping_name', 'shipping_address', 'billing_address',
@@ -52,9 +52,9 @@ class Order extends Model
         ];
     }
 
-    public function user()
+    public function customer()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(Customer::class, 'customer_id');
     }
 
     public function items()

@@ -5,16 +5,16 @@ namespace App\Services;
 use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\ProductVariant;
-use App\Models\User;
+use Illuminate\Contracts\Auth\Authenticatable;
 
 class CartService
 {
-    public function getOrCreateCart(?User $user, ?string $sessionId): Cart
+    public function getOrCreateCart(?Authenticatable $user, ?string $sessionId): Cart
     {
         if ($user) {
-            $cart = Cart::where('user_id', $user->id)->first();
+            $cart = Cart::where('customer_id', $user->id)->first();
             if (!$cart) {
-                $cart = Cart::create(['user_id' => $user->id]);
+                $cart = Cart::create(['customer_id' => $user->id]);
             }
             return $cart;
         }
@@ -94,7 +94,7 @@ class CartService
         ];
     }
 
-    public function mergeGuestCart(User $user, string $sessionId): void
+    public function mergeGuestCart(Authenticatable $user, string $sessionId): void
     {
         $guestCart = Cart::where('session_id', $sessionId)->first();
         if (!$guestCart) return;

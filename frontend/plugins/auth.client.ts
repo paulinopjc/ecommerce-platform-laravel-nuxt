@@ -1,4 +1,4 @@
 export default defineNuxtPlugin(() => {
-  const auth = useAuthStore()
-  auth.loadFromStorage()
+  useAuthStore().loadFromStorage()
+  useCustomerStore().loadFromStorage()
 })

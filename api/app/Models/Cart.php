@@ -7,13 +7,13 @@ use Illuminate\Database\Eloquent\Model;
 class Cart extends Model
 {
     protected $fillable = [
-        'user_id',
-        'session_id'
+        'customer_id',
+        'session_id',
     ];
 
-    public function user()
+    public function customer()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(Customer::class, 'customer_id');
     }
 
     public function items()

@@ -1,5 +1,4 @@
 export const USER_ROLE = {
-  CUSTOMER:  'customer',
   WAREHOUSE: 'warehouse',
   MANAGER:   'manager',
   ADMIN:     'admin',

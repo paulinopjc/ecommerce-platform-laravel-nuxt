@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\CheckoutController;
 use App\Http\Controllers\Api\V1\ConfigController;
 use App\Http\Controllers\Api\V1\CouponController;
+use App\Http\Controllers\Api\V1\CustomerController;
 use App\Http\Controllers\Api\V1\OrderController;
 use App\Http\Controllers\Api\V1\ProductController;
 use App\Http\Controllers\Api\V1\UserController;
@@ -34,6 +35,12 @@ Route::prefix('v1')->group(function () {
 
         Route::post('checkout', [CheckoutController::class, 'store']);
         Route::get('orders/{order}', [OrderController::class, 'show']);
+
+        // Customer profile routes (Customer token only — controller guards instanceof)
+        Route::get('customer/me',         [CustomerController::class, 'me']);
+        Route::get('customer/orders',     [CustomerController::class, 'orders']);
+        Route::get('customer/addresses',  [CustomerController::class, 'addresses']);
+        Route::post('customer/addresses', [CustomerController::class, 'storeAddress']);
     });
 
     // Admin / Manager only

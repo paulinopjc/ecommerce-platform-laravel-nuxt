@@ -9,9 +9,9 @@ class CouponUsage extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'coupon_id', 
-        'order_id', 
-        'user_id', 
+        'coupon_id',
+        'order_id',
+        'customer_id',
         'discount_cents',
     ];
 
@@ -30,8 +30,8 @@ class CouponUsage extends Model
         return $this->belongsTo(Order::class);
     }
 
-    public function user()
+    public function customer()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(Customer::class, 'customer_id');
     }
 }

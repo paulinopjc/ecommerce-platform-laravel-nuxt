@@ -55,7 +55,7 @@ const auth = useAuthStore()
 const error = computed(() => (route.query.error as string) || null)
 const googleAuthUrl = computed(() => {
   const redirect = (route.query.redirect as string) || '/admin'
-  return `${config.public.apiUrl}/auth/google?redirect=${encodeURIComponent(redirect)}`
+  return `${config.public.apiUrl}/auth/google?mode=user&redirect=${encodeURIComponent(redirect)}`
 })
 
 function handleLogout() {

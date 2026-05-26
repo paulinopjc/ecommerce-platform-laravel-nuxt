@@ -2,24 +2,26 @@
 
 namespace Tests\Feature;
 
+use App\Models\Customer;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class OrderControllerTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function makeOrder(User $user, array $overrides = []): Order
+    private function makeOrder(Customer $customer, array $overrides = []): Order
     {
         return Order::create(array_merge([
-            'user_id'      => $user->id,
-            'order_number' => 'ORD-' . uniqid(),
-            'status'       => Order::STATUS_PENDING_PAYMENT,
+            'customer_id'    => $customer->id,
+            'order_number'   => 'ORD-' . uniqid(),
+            'status'         => Order::STATUS_PENDING_PAYMENT,
             'payment_method' => Order::PAYMENT_COD,
-            'total_cents'  => 10000,
+            'total_cents'    => 10000,
         ], $overrides));
     }
 
@@ -34,17 +36,17 @@ class OrderControllerTest extends TestCase
 
     public function test_index_requires_admin_or_manager_role(): void
     {
-        $customer = User::factory()->create(['role' => User::ROLE_CUSTOMER]);
+        // A Customer token must be rejected on admin-only routes
+        $customer = Customer::factory()->create();
+        Sanctum::actingAs($customer);
 
-        $this->actingAs($customer)
-             ->getJson('/api/v1/orders')
-             ->assertForbidden();
+        $this->getJson('/api/v1/orders')->assertForbidden();
     }
 
     public function test_index_returns_paginated_orders_for_admin(): void
     {
         $admin    = User::factory()->create(['role' => User::ROLE_ADMIN]);
-        $customer = User::factory()->create(['role' => User::ROLE_CUSTOMER]);
+        $customer = Customer::factory()->create();
 
         $this->makeOrder($customer);
         $this->makeOrder($customer);
@@ -58,7 +60,7 @@ class OrderControllerTest extends TestCase
     public function test_index_filters_by_status(): void
     {
         $admin    = User::factory()->create(['role' => User::ROLE_ADMIN]);
-        $customer = User::factory()->create(['role' => User::ROLE_CUSTOMER]);
+        $customer = Customer::factory()->create();
 
         $this->makeOrder($customer, ['status' => Order::STATUS_PENDING_PAYMENT]);
         $this->makeOrder($customer, ['status' => Order::STATUS_PAID]);
@@ -75,7 +77,7 @@ class OrderControllerTest extends TestCase
     public function test_index_filters_by_source(): void
     {
         $admin    = User::factory()->create(['role' => User::ROLE_ADMIN]);
-        $customer = User::factory()->create(['role' => User::ROLE_CUSTOMER]);
+        $customer = Customer::factory()->create();
 
         $this->makeOrder($customer, ['source' => Order::SOURCE_WEB]);
         $this->makeOrder($customer, ['source' => Order::SOURCE_SHOPEE]);
@@ -95,30 +97,31 @@ class OrderControllerTest extends TestCase
 
     public function test_show_allows_customer_to_view_own_order(): void
     {
-        $customer = User::factory()->create(['role' => User::ROLE_CUSTOMER]);
+        $customer = Customer::factory()->create();
         $order    = $this->makeOrder($customer);
 
-        $this->actingAs($customer)
-             ->getJson("/api/v1/orders/{$order->id}")
+        Sanctum::actingAs($customer);
+
+        $this->getJson("/api/v1/orders/{$order->id}")
              ->assertOk()
              ->assertJsonPath('data.id', $order->id);
     }
 
-    public function test_show_blocks_customer_from_viewing_another_users_order(): void
+    public function test_show_blocks_customer_from_viewing_another_customers_order(): void
     {
-        $owner   = User::factory()->create(['role' => User::ROLE_CUSTOMER]);
-        $other   = User::factory()->create(['role' => User::ROLE_CUSTOMER]);
-        $order   = $this->makeOrder($owner);
+        $owner = Customer::factory()->create();
+        $other = Customer::factory()->create();
+        $order = $this->makeOrder($owner);
 
-        $this->actingAs($other)
-             ->getJson("/api/v1/orders/{$order->id}")
-             ->assertNotFound();
+        Sanctum::actingAs($other);
+
+        $this->getJson("/api/v1/orders/{$order->id}")->assertNotFound();
     }
 
     public function test_show_allows_manager_to_view_any_order(): void
     {
         $manager  = User::factory()->create(['role' => User::ROLE_MANAGER]);
-        $customer = User::factory()->create(['role' => User::ROLE_CUSTOMER]);
+        $customer = Customer::factory()->create();
         $order    = $this->makeOrder($customer);
 
         $this->actingAs($manager)
@@ -132,18 +135,18 @@ class OrderControllerTest extends TestCase
 
     public function test_mark_as_paid_requires_admin_or_manager(): void
     {
-        $customer = User::factory()->create(['role' => User::ROLE_CUSTOMER]);
+        $customer = Customer::factory()->create();
         $order    = $this->makeOrder($customer, ['payment_method' => Order::PAYMENT_COD]);
 
-        $this->actingAs($customer)
-             ->postJson("/api/v1/orders/{$order->id}/mark-paid")
-             ->assertForbidden();
+        Sanctum::actingAs($customer);
+
+        $this->postJson("/api/v1/orders/{$order->id}/mark-paid")->assertForbidden();
     }
 
     public function test_mark_as_paid_rejects_non_cod_orders(): void
     {
         $admin    = User::factory()->create(['role' => User::ROLE_ADMIN]);
-        $customer = User::factory()->create(['role' => User::ROLE_CUSTOMER]);
+        $customer = Customer::factory()->create();
         $order    = $this->makeOrder($customer, ['payment_method' => Order::PAYMENT_XENDIT]);
 
         $this->actingAs($admin)
@@ -155,7 +158,7 @@ class OrderControllerTest extends TestCase
     public function test_mark_as_paid_rejects_already_paid_order(): void
     {
         $admin    = User::factory()->create(['role' => User::ROLE_ADMIN]);
-        $customer = User::factory()->create(['role' => User::ROLE_CUSTOMER]);
+        $customer = Customer::factory()->create();
         $order    = $this->makeOrder($customer, [
             'payment_method' => Order::PAYMENT_COD,
             'status'         => Order::STATUS_PAID,
@@ -170,7 +173,7 @@ class OrderControllerTest extends TestCase
     public function test_mark_as_paid_updates_order_status_to_paid(): void
     {
         $admin    = User::factory()->create(['role' => User::ROLE_ADMIN]);
-        $customer = User::factory()->create(['role' => User::ROLE_CUSTOMER]);
+        $customer = Customer::factory()->create();
         $order    = $this->makeOrder($customer, [
             'payment_method' => Order::PAYMENT_COD,
             'status'         => Order::STATUS_PENDING_PAYMENT,
@@ -202,7 +205,7 @@ class OrderControllerTest extends TestCase
     public function test_update_status_requires_valid_transition(): void
     {
         $admin    = User::factory()->create(['role' => User::ROLE_ADMIN]);
-        $customer = User::factory()->create(['role' => User::ROLE_CUSTOMER]);
+        $customer = Customer::factory()->create();
         $order    = $this->makeOrder($customer, ['status' => Order::STATUS_PENDING_PAYMENT]);
 
         // Cannot go from pending_payment directly to shipped
@@ -214,7 +217,7 @@ class OrderControllerTest extends TestCase
     public function test_update_status_allows_valid_transition(): void
     {
         $admin    = User::factory()->create(['role' => User::ROLE_ADMIN]);
-        $customer = User::factory()->create(['role' => User::ROLE_CUSTOMER]);
+        $customer = Customer::factory()->create();
         $order    = $this->makeOrder($customer, ['status' => Order::STATUS_PAID]);
 
         $this->actingAs($admin)

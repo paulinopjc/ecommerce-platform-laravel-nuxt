@@ -9,16 +9,18 @@
 import { MANAGER_AND_ABOVE } from '~/constants/enums'
 import type { UserRole } from '~/constants/enums'
 
-const router = useRouter()
-const auth = useAuthStore()
-const error = ref<string | null>(null)
+const router        = useRouter()
+const auth          = useAuthStore()
+const customerStore = useCustomerStore()
+const error         = ref<string | null>(null)
 
 onMounted(() => {
-  const hash = window.location.hash.substring(1)
-  const params = new URLSearchParams(hash)
-  const token = params.get('token')
-  const userStr = params.get('user')
+  const hash     = window.location.hash.substring(1)
+  const params   = new URLSearchParams(hash)
+  const token    = params.get('token')
+  const userStr  = params.get('user')
   const redirect = params.get('redirect') || '/'
+  const type     = params.get('type') // 'customer' | 'user'
 
   window.history.replaceState(null, '', '/auth/callback')
 
@@ -28,15 +30,20 @@ onMounted(() => {
   }
 
   try {
-    const user = JSON.parse(userStr)
+    const principal = JSON.parse(userStr)
 
-    // Backoffice routes require admin or manager role
-    if (redirect.startsWith('/admin') && !MANAGER_AND_ABOVE.includes(user.role as UserRole)) {
-      router.replace('/admin/login?error=' + encodeURIComponent('Access denied. Admin accounts only.'))
-      return
+    if (type === 'user') {
+      // Backoffice flow — verify role before storing
+      if (!MANAGER_AND_ABOVE.includes(principal.role as UserRole)) {
+        router.replace('/admin/login?error=' + encodeURIComponent('Access denied. Admin accounts only.'))
+        return
+      }
+      auth.handleOAuthCallback({ user: principal, token })
+    } else {
+      // Customer (storefront) flow
+      customerStore.handleOAuthCallback({ customer: principal, token })
     }
 
-    auth.handleOAuthCallback({ user, token })
     router.replace(redirect)
   } catch {
     error.value = 'Sign-in failed.'

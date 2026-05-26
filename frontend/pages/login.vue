@@ -28,6 +28,6 @@ const config = useRuntimeConfig()
 const error = computed(() => (route.query.error as string) || null)
 const googleAuthUrl = computed(() => {
   const redirect = (route.query.redirect as string) || '/'
-  return `${config.public.apiUrl}/auth/google?redirect=${encodeURIComponent(redirect)}`
+  return `${config.public.apiUrl}/auth/google?mode=customer&redirect=${encodeURIComponent(redirect)}`
 })
 </script>
