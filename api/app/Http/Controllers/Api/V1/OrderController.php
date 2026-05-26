@@ -83,7 +83,12 @@ class OrderController extends Controller
         ]);
 
         $orderService = app(\App\Services\OrderService::class);
-        $updated = $orderService->updateStatus($order, $validated['status'], $request->user(), $validated['note'] ?? null);
+
+        try {
+            $updated = $orderService->updateStatus($order, $validated['status'], $request->user(), $validated['note'] ?? null);
+        } catch (\Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
 
         return response()->json(['data' => $updated]);
     }
