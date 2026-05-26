@@ -1,0 +1,7 @@
+node_modules/
+vendor/
+.nuxt/
+.output/
+.env
+*.log
+storage/*.key
