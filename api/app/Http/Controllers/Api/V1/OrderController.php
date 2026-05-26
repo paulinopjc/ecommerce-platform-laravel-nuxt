@@ -11,6 +11,31 @@ use Illuminate\Http\Request;
 
 class OrderController extends Controller
 {
+    public function index(Request $request): JsonResponse
+    {
+        $query = Order::with(['user', 'items'])->orderBy('created_at', 'desc');
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('source')) {
+            $query->where('source', $request->source);
+        }
+
+        return response()->json($query->paginate(20));
+    }
+
+    public function show(Request $request, Order $order): JsonResponse
+    {
+        // Customers can only view their own orders
+        if (!$request->user()->isManager() && $order->user_id !== $request->user()->id) {
+            return response()->json(['message' => 'Not found'], 404);
+        }
+
+        return response()->json(['data' => $order->load(['items', 'payments', 'statusHistory'])]);
+    }
+
     public function markAsPaid(Request $request, Order $order): JsonResponse
     {
         if ($order->payment_method !== Order::PAYMENT_COD) {
@@ -48,5 +73,18 @@ class OrderController extends Controller
         ]);
 
         return response()->json(['data' => $order->fresh()]);
+    }
+
+    public function updateStatus(Request $request, Order $order): JsonResponse
+    {
+        $validated = $request->validate([
+            'status' => 'required|in:' . implode(',', Order::STATUSES),
+            'note'   => 'nullable|string',
+        ]);
+
+        $orderService = app(\App\Services\OrderService::class);
+        $updated = $orderService->updateStatus($order, $validated['status'], $request->user(), $validated['note'] ?? null);
+
+        return response()->json(['data' => $updated]);
     }
 }
